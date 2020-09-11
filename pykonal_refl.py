@@ -47,7 +47,7 @@ def calc_refl(velocity, shotloc_x, shotloc_z, layer_idxs):
         solver_ug.unknown[idx] = False
         solver_ug.trial.push(*idx)
     solver_ug.solve()
-    ofs = np.arange(solver_ug.tt.min_coords[0] - shotloc_x, solver_ug.tt.max_coords[0], solver_ug.tt.node_intervals[0])
+    ofs = np.linspace(solver_ug.tt.min_coords[0] - shotloc_x, solver_ug.tt.max_coords[0] - shotloc_x, num=solver_ug.tt.npts[0], endpoint=True)
     return ofs, solver_ug.tt.values[:,0,0]
 
 def make_vel(vel, zi, alphai, zw, alphaw):
@@ -86,15 +86,15 @@ def tt_err(refl, velocity, shotloc_x, shotloc_z, obs_x, obs_t,  disp=False):
     refl_z=refl[0]
     refl_ang=refl[1]
     layer_idxs = make_nodes(velocity, refl_z, refl_ang)
-    tt_mod = calc_refl(velocity, shotloc_x, shotloc_z, layer_idxs)
+    modx, modt = calc_refl(velocity, shotloc_x, shotloc_z, layer_idxs)
     err = 0
     for x,t in zip(obs_x, obs_t):
         (ix, iz, iy) = get_idx(velocity, (x/1000, 0, 0))
         #print(ix, x)
-        modt = tt_mod[ix]
-        diff = t-modt
+        modti = modt[ix]
+        diff = t-modti
         if disp:
-            print(x, t, ix, modt, diff)
+            print(x, t, ix, modti, diff)
         err = err + diff**2
     print("z=", refl_z, "ang=", refl_ang, "err=", err)
     return err
@@ -104,15 +104,16 @@ def tt_err_waterbot(refl, zi, alphai, velocity, shotloc_x, shotloc_z, obs_x, obs
     refl_z=refl[0]
     refl_ang=refl[1]
     v, icelay, waterlay = make_vel(velocity, zi, alphai, refl_z, refl_ang) #make_nodes(velocity, refl_z, refl_ang)
-    tt_mod = calc_refl(v, shotloc_x, shotloc_z, waterlay)
+    #print(v.min_coords)
+    modx, modt = calc_refl(velocity, shotloc_x, shotloc_z, waterlay)
     err = 0
     for x,t in zip(obs_x, obs_t):
         (ix, iz, iy) = get_idx(v, (x/1000, 0, 0))
         #print(ix, x)
-        modt = tt_mod[ix]
-        diff = t-modt
+        modti = modt[ix]
+        diff = t-modti
         if disp:
-            print(x, t, ix, modt, diff)
+            print(x, t, ix, modti, diff)
         err = err + diff**2
     print("z=", refl_z, "ang=", refl_ang, "err=", err)
     return err
@@ -132,6 +133,35 @@ def ice_mod(vi = 3.8, x0=-2.56, dx=0.01, dz =0.001, nx=512, nz=1024):
     
     velocity.values[0:nx, 0:nz] = vi
 
+    return velocity
+
+def water_mod(icemod, zi, alphai):
+    velocity = icemod
+    #pykonal.fields.ScalarField3D(coord_sys="cartesian")
+    #elocity.min_coords = -2.56, 0, 0
+    #velocity.node_intervals = 0.01, 0.001, 0.01
+    #velocity.npts = 512, 1024, 1
+    #velocity.values = 3.8*np.ones(velocity.npts)
+    #velocity.values[0:511,60:70] = 1.5
+    #velocity.values[0:511,71:127] = 4.5
+    npts = velocity.npts
+    nx=npts[0]
+    nz=npts[1]
+    ny=npts[2]
+    
+    velocity.values[0:nx, 0:nz] = 3.8
+    icelay = make_nodes(velocity, zi, alphai)
+    #waterlay = make_nodes(vel, zw, alphaw)
+
+    for ix in range(nx):
+        #idx = int(zi/dz) + int(ix*dx*np.tan(alphai)/dz)
+        #print(ix, idx)
+        ili = icelay[ix]
+    #    wli = waterlay[ix]
+        velocity.values[ix, ili:nz] = 1.5
+    #    vel.values[ix, wli:nz] = 4.5
+    #vel.values[0:nx-1, 60:70] = 1.5
+    #vel.values[0:nx-1,  71:nz-1] = 4.5
     return velocity
 
 def get_idx(velocity, coord):

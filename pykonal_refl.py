@@ -96,6 +96,7 @@ def tt_err(refl, velocity, shotloc_x, shotloc_z, obs_x, obs_t,  disp=False):
         if disp:
             print(x, t, ix, modti, diff)
         err = err + diff**2
+    err  = np.sqrt(err / len(obs_x))
     print("z=", refl_z, "ang=", refl_ang, "err=", err)
     return err
 
@@ -115,6 +116,7 @@ def tt_err_waterbot(refl, zi, alphai, velocity, shotloc_x, shotloc_z, obs_x, obs
         if disp:
             print(x, t, ix, modti, diff)
         err = err + diff**2
+    err  = np.sqrt(err / len(obs_x))
     print("z=", refl_z, "ang=", refl_ang, "err=", err)
     return err
 
